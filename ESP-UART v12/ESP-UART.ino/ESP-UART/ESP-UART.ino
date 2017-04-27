@@ -79,20 +79,6 @@ void runWifi(){
        Serial.print(".");
        digitalWrite(D2,HIGH);
     }
-    byte macAddr[6];  
-    WiFi.macAddress(macAddr);
-    Serial.print("MAC: ");
-    Serial.print(macAddr[5],HEX);
-    Serial.print(":");
-    Serial.print(macAddr[4],HEX);
-    Serial.print(":");
-    Serial.print(macAddr[3],HEX);
-    Serial.print(":");
-    Serial.print(macAddr[2],HEX);
-    Serial.print(":");
-    Serial.print(macAddr[1],HEX);
-    Serial.print(":");
-    Serial.println(macAddr[0],HEX);
     // Ready to send data to server
     delay(10);
     client.flush();
@@ -108,12 +94,6 @@ void runWifi(){
     client.write(mq2Value1);
     client.write(mq7Value0);
     client.write(mq7Value1);
-    client.write(macAddr[5]);
-    client.write(macAddr[4]);
-    client.write(macAddr[3]);
-    client.write(macAddr[2]);
-    client.write(macAddr[1]);
-    client.write(macAddr[0]);
     client.flush();
     delay(30);
     // Ready to read data sent from server
@@ -173,4 +153,3 @@ void comUART(){
     Serial.println(mq7Value,DEC);
     digitalWrite(D1,LOW);
 }
-
