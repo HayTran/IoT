@@ -86,27 +86,33 @@ void loop() {
    readBH1750();
    readMQ();
    comUART();
-   delay(700);
+   delay(50);
 }
 
 void comUART(){
   digitalWrite(13,HIGH);
   delay(10);
-   mySerial.write(temperature);
-   mySerial.write(humidity);
-   mySerial.write(flameValue0_0);
-   mySerial.write(flameValue0_1);
-   mySerial.write(flameValue1_0);
-   mySerial.write(flameValue1_1);
-   mySerial.write(lightIntensity0);
-   mySerial.write(lightIntensity1);
-   mySerial.write(mq2Value0);
-   mySerial.write(mq2Value1);
-   mySerial.write(mq7Value0);
-   mySerial.write(mq7Value1);
-   mySerial.write(valueW);
-   delay(5);
-  if (mySerial.available()) {  
+  mySerial.write(temperature);
+  mySerial.write(humidity);
+  mySerial.write(flameValue0_0);
+  mySerial.write(flameValue0_1);
+  mySerial.write(flameValue1_0);
+  mySerial.write(flameValue1_1);
+  mySerial.write(lightIntensity0);
+  mySerial.write(lightIntensity1);
+  mySerial.write(mq2Value0);
+  mySerial.write(mq2Value1);
+  mySerial.write(mq7Value0);
+  mySerial.write(mq7Value1);
+  mySerial.write(valueW);
+  delay(5);
+  byte numberOfBufferReceiveByte = 0;
+  if (numberOfBufferReceiveByte = mySerial.available()) {
+    Serial.print("======================================================== Buffer Receive Byte: ");
+    Serial.println(numberOfBufferReceiveByte,DEC);  // Buffer byte
+    for (int i = 0; i < numberOfBufferReceiveByte - 1; i ++) {
+      int ignoreValue = mySerial.read(); 
+    }
     valueR = mySerial.read();
   }
   mySerial.flush(); // This action will refresh buffer in serial communication
@@ -115,9 +121,9 @@ void comUART(){
   if(valueW <= 0){
     valueW = 255;
   }
-  Serial.print("Count of Server: ");
+  Serial.print("======================================================== Count of Server: ");
   Serial.println(valueR,DEC);   // read it and send it out Serial1 (pins 0 & 1)
-  Serial.print("Count of Arduino: ");
+  Serial.print("======================================================== Count of Arduino: ");
   Serial.println(valueW);
   delay(10);
 }

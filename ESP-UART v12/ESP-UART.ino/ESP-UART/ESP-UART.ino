@@ -45,7 +45,7 @@ void setup() {
 void loop() {
     comUART();
     runWifi();
-    delay(1000);
+    
 }
 
 void wifiSetUp(){
