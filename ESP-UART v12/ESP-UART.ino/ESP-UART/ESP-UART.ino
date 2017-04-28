@@ -1,19 +1,23 @@
 #include <ESP8266WiFi.h>
 #include <SoftwareSerial.h>
 
-// Set up software serial for ESP
+  // Set up software serial for ESP
 SoftwareSerial mySerial(D6,D7); // RX, TX
 
-// Variable for connect to wifi
+  // Variable for connect to wifi
 const char *ssid = "tieunguunhi";
 const char *password = "tretrau1235";
 int status = WL_IDLE_STATUS;     
 
-// Variable for connect to Socket Server
+  // Set the Soft Access Point in ESP8266
+const char *ssidSoftAP = "HayTran";
+const char *passwordSoftAP = "vanhay2020";
+
+  // Variable for connect to Socket Server
 const uint16_t port = 8080;         
 const char * host = "192.168.1.200"; 
 
-// Variable for storing data sent to Raspberry
+  // Variable for storing data sent to Raspberry
 byte humidity = 0;
 byte temperature = 0;
 byte flameValue0_0 = 0; 
@@ -27,11 +31,12 @@ byte mq2Value1 = 0;
 byte mq7Value0 = 0;
 byte mq7Value1 = 0;
 
+  // Variables for sequences data between server and client socket
 int countOfServer = -1;
 int countOfArduino = 0;
 
-// Variable sleep time for ESP8266
-const int sleepTimeS = 100;
+  // Variable for strength of Wifi
+byte strengthWifi = 0;  
 
 void setup() { 
     Serial.begin(115200);
@@ -40,17 +45,22 @@ void setup() {
     pinMode(D1,OUTPUT);
       // D2 for Wifi communication signal
     pinMode(D2,OUTPUT);
+//    WiFi.softAP(ssidSoftAP,passwordSoftAP);
+//    IPAddress myIP = WiFi.softAPIP();
+//    Serial.print("AP IP address: ");
+//    Serial.println(myIP);
     wifiSetUp();
 }
 void loop() {
     comUART();
     runWifi();
-    
+    printWifiStatus();
+    delay(300);
 }
 
 void wifiSetUp(){
     delay(10);
-    // We start by connecting to a WiFi network
+      // We start by connecting to a WiFi network
     Serial.println();
     Serial.print("Connecting to ");
     Serial.println(ssid);
@@ -68,10 +78,10 @@ void wifiSetUp(){
     Serial.println(WiFi.localIP());
 }
 void runWifi(){
-    // Use WiFiClient class to create TCP connections
+      // Use WiFiClient class to create TCP connections
     digitalWrite(D2,HIGH);
     WiFiClient client;
-    //Increase counter variable 
+      //Increase counter variable 
     delay(30);
     Serial.println("Connecting to server socket: ");
     Serial.println(host);
@@ -79,7 +89,7 @@ void runWifi(){
        Serial.print(".");
        digitalWrite(D2,HIGH);
     }
-    // Ready to send data to server
+      // Ready to send data to server
     delay(10);
     client.flush();
     client.write(humidity);
@@ -96,7 +106,7 @@ void runWifi(){
     client.write(mq7Value1);
     client.flush();
     delay(30);
-    // Ready to read data sent from server
+      // Ready to read data sent from server
     while(client.available()){
       countOfServer = client.read();
     }
@@ -153,3 +163,34 @@ void comUART(){
     Serial.println(mq7Value,DEC);
     digitalWrite(D1,LOW);
 }
+void printWifiStatus(){
+    // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+    // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+    // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  if (rssi < -30 && rssi > -65) {
+    strengthWifi = 5;  
+  } else if (rssi <= -65 && rssi > -70) {
+    strengthWifi = 4;
+  } else if (rssi <= -70 && rssi > -80) {
+    strengthWifi = 3;
+  } else if (rssi <= -70 && rssi > -80) {
+    strengthWifi = 2;
+  } else if (rssi > -90) {
+    strengthWifi = 1;
+  }
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.print(" dBm");
+  Serial.print(", ");
+  Serial.print(strengthWifi);
+  Serial.println();
+}
+
