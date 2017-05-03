@@ -9,10 +9,6 @@ const char *ssid = "tieunguunhi";
 const char *password = "tretrau1235";
 int status = WL_IDLE_STATUS;     
 
-  // Set the Soft Access Point in ESP8266
-const char *ssidSoftAP = "HayTran";
-const char *passwordSoftAP = "vanhay2020";
-
   // Variable for connect to Socket Server
 const uint16_t port = 8080;         
 const char * host = "192.168.1.200"; 
@@ -45,10 +41,7 @@ void setup() {
     pinMode(D1,OUTPUT);
       // D2 for Wifi communication signal
     pinMode(D2,OUTPUT);
-//    WiFi.softAP(ssidSoftAP,passwordSoftAP);
-//    IPAddress myIP = WiFi.softAPIP();
-//    Serial.print("AP IP address: ");
-//    Serial.println(myIP);
+    WiFi.mode(WIFI_STA);
     wifiSetUp();
 }
 void loop() {
@@ -164,10 +157,6 @@ void comUART(){
     digitalWrite(D1,LOW);
 }
 void printWifiStatus(){
-    // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
     // print your WiFi shield's IP address:
   IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
@@ -193,4 +182,5 @@ void printWifiStatus(){
   Serial.print(strengthWifi);
   Serial.println();
 }
+
 
