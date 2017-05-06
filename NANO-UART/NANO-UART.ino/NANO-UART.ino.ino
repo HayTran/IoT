@@ -86,7 +86,6 @@ void loop() {
    readBH1750();
    readMQ();
    comUART();
-   delay(500);
 }
 
 void comUART(){

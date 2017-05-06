@@ -31,6 +31,7 @@ byte mq7Value1 = 0;
 char resultFromServer[14];
 int ind = 0;
 byte countOfArduino = 0;
+const byte NUMBER_BUFFER_BYTE_RECEIVE = 13;
 
   // Variable for strength of Wifi
 byte strengthWifi = 0;  
@@ -49,6 +50,7 @@ void loop() {
     comUART();
     runWifi();
     printWifiStatus();
+    delay(700);
 }
 
 void wifiSetUp(){
@@ -74,7 +76,7 @@ void runWifi(){
       // Use WiFiClient class to create TCP connections
     digitalWrite(D2,HIGH);
       //Increase counter variable 
-    delay(30);
+    delay(20);
     Serial.println("Connecting to server socket: ");
     Serial.println(host);
     while(!client.connect(host,port)){
@@ -83,7 +85,7 @@ void runWifi(){
     }
     sendToServer();
       // Ready to read data sent from server
-    delay(40);
+    delay(30);
     receiveFromServer();
     client.stop();
     delay(5);
@@ -149,7 +151,13 @@ bool checkResultFromServer(){
 void comUART(){
       // Begin communicate serial
     digitalWrite(D1,HIGH);
-    if (mySerial.available()) { 
+    byte receiveBytes = 0;
+    if (receiveBytes = mySerial.available()) { 
+          // Read bytes is not needed
+       for(int i = 0; i < receiveBytes - NUMBER_BUFFER_BYTE_RECEIVE; i++){
+          byte ingoreByte = mySerial.read();
+          Serial.println("#############CLEARED################");
+       }
        temperature = mySerial.read();   
        humidity = mySerial.read();
        flameValue0_0 = mySerial.read();
