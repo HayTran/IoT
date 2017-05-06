@@ -8,9 +8,10 @@ int keyIndex = 0;            // your network key Index number (needed only for W
 
 int status = WL_IDLE_STATUS;
 
-WiFiServer server(5678);
-
-boolean alreadyConnected = false; // whether or not the client was connected previously
+WiFiServer server(8080);
+WiFiClient client;
+char data[1500];
+int ind = 0;
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -40,33 +41,26 @@ void setup() {
   server.begin();
   // you're connected now, so print out the status:
   printWifiStatus();
+ 
 }
 
 
 void loop() {
-  // wait for a new client:
-  WiFiClient client = server.available();
-
-
-  // when the client sends the first byte, say hello:
-  if (client) {
-    if (!alreadyConnected) {
-      // clead out the input buffer:
-      client.flush();
-      Serial.println("We have a new client");
-      client.println("Hello, client!");
-      alreadyConnected = true;
+  // put your main code here, to run repeatedly:
+   // listen for incoming clients
+ client = server.available();
+  if (client){
+    Serial.println("Client connected");
+    while (client.connected()){
+        // Read the incoming TCP command
+        String command = ReadTCPCommand(&client);
+        // Debugging display command
+        command.trim();
+        Serial.println(command);
+        // Phrase the command
+        PhraseTCPCommand(&client, &command);
     }
-
-    if (client.available() > 0) {
-      // read the bytes incoming from the client:
-      char thisChar = client.read();
-      // echo the bytes back to the client:
-      server.write(thisChar);
-      // echo the bytes to the server as well:
-      Serial.write(thisChar);
-    }
-  }
+  } 
 }
 
 

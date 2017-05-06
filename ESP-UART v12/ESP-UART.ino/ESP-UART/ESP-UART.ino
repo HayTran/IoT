@@ -11,7 +11,7 @@ int status = WL_IDLE_STATUS;
 
   // Variable for connect to Socket Server
 const uint16_t port = 8080;         
-const char * host = "192.168.1.200"; 
+const char * host = "192.168.1.100"; 
 
   // Variable for storing data sent to Raspberry
 byte humidity = 0;
@@ -28,12 +28,13 @@ byte mq7Value0 = 0;
 byte mq7Value1 = 0;
 
   // Variables for sequences data between server and client socket
-int countOfServer = -1;
-int countOfArduino = 0;
+char resultFromServer[14];
+int ind = 0;
+byte countOfArduino = 0;
 
   // Variable for strength of Wifi
 byte strengthWifi = 0;  
-
+WiFiClient client;
 void setup() { 
     Serial.begin(115200);
     mySerial.begin(115200);
@@ -48,7 +49,6 @@ void loop() {
     comUART();
     runWifi();
     printWifiStatus();
-    delay(300);
 }
 
 void wifiSetUp(){
@@ -73,7 +73,6 @@ void wifiSetUp(){
 void runWifi(){
       // Use WiFiClient class to create TCP connections
     digitalWrite(D2,HIGH);
-    WiFiClient client;
       //Increase counter variable 
     delay(30);
     Serial.println("Connecting to server socket: ");
@@ -82,9 +81,18 @@ void runWifi(){
        Serial.print(".");
        digitalWrite(D2,HIGH);
     }
-      // Ready to send data to server
-    delay(10);
-    client.flush();
+    sendToServer();
+      // Ready to read data sent from server
+    delay(40);
+    receiveFromServer();
+    client.stop();
+    delay(5);
+    Serial.println("closing connection");
+    digitalWrite(D2,LOW);
+}
+void sendToServer(){
+    // Ready to send data to server
+    delay(5);
     client.write(humidity);
     client.write(temperature);
     client.write(flameValue0_0);
@@ -97,16 +105,46 @@ void runWifi(){
     client.write(mq2Value1);
     client.write(mq7Value0);
     client.write(mq7Value1);
-    client.flush();
-    delay(30);
-      // Ready to read data sent from server
-    while(client.available()){
-      countOfServer = client.read();
+}
+void receiveFromServer(){
+  ind = 0;
+    if (client.available() == 12){
+        // Read bytes send from server
+      while(client.available()){
+       resultFromServer[ind] = client.read();
+       ind++;
+       delay(5);
+      }
+        // Check if true continue or not send again
+      if (checkResultFromServer()){
+        Serial.println("Receive data don't match with send data, try send again!");
+        client.stop();
+        runWifi();
+      }
+    } else {
+      Serial.println("Don't receive enough bytes, try send again!");
+      client.stop();
+      runWifi();
     }
-    delay(5);
-    Serial.println("closing connection");
-    client.stop();
-    digitalWrite(D2,LOW);
+}
+bool checkResultFromServer(){
+  // Check whether or not receive bytes match send byte
+  if (resultFromServer[0]!=humidity
+    || resultFromServer[1]!= temperature
+    || resultFromServer[2]!= flameValue0_0
+    || resultFromServer[3]!= flameValue0_1
+    || resultFromServer[4]!= flameValue1_0
+    || resultFromServer[5]!= flameValue1_1
+    || resultFromServer[6]!= lightIntensity0
+    || resultFromServer[7]!= lightIntensity1
+    || resultFromServer[8]!= mq2Value0
+    || resultFromServer[9]!= mq2Value1
+    || resultFromServer[10]!= mq7Value0
+    || resultFromServer[11]!= mq7Value1 ){
+        return true;
+      } else {
+        return false;
+      }
 }
 void comUART(){
       // Begin communicate serial
@@ -126,14 +164,11 @@ void comUART(){
        mq7Value1 = mySerial.read();
        countOfArduino = mySerial.read();
     }
-    if(countOfServer >=0){
-           mySerial.write(countOfServer);
+    if(resultFromServer[0] >=0){
+           mySerial.write(resultFromServer[0]);
        }
-    Serial.print("========================================  countOfServer = ");
-    Serial.println(countOfServer,DEC);
-    Serial.print("========================================  countOfArduino = ");
+    Serial.print("========================================Count Of Arduino: ");
     Serial.println(countOfArduino,DEC);
-    
     mySerial.flush(); // This action will refresh buffer in serial communication
     Serial.print("Temperature: ");
     Serial.println(temperature);
