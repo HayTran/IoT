@@ -27,29 +27,38 @@ byte mq2Value1 = 0;
 byte mq7Value0 = 0;
 byte mq7Value1 = 0;
 
-  // Variables for sequences data between server and client socket
-char resultFromServer[14];
-int ind = 0;
+  // Variable for Serial communication with Arduino
 byte countOfArduino = 0;
 const byte NUMBER_BUFFER_BYTE_RECEIVE = 13;
 
+  // Variables for sequences data between server and client socket
+char resultFromServer[15];
+int ind = 0;
+byte numberSendToServer = 0;
+
   // Variable for strength of Wifi
 byte strengthWifi = 0;  
+
 WiFiClient client;
 void setup() { 
     Serial.begin(115200);
     mySerial.begin(115200);
-      // D1 for UART communiation signal
+      // D1 for UART communiation status
     pinMode(D1,OUTPUT);
-      // D2 for Wifi communication signal
+      // D2 for Wifi communication status
     pinMode(D2,OUTPUT);
+      // D3 for Socket communication status
+    pinMode(D3,OUTPUT);
+    digitalWrite(D3,LOW);
     WiFi.mode(WIFI_STA);
     wifiSetUp();
 }
 void loop() {
+    getWifiStatus();
+    numberSendToServer = 0;
+    checkNumberSendToServer();
     comUART();
     runWifi();
-    printWifiStatus();
     delay(700);
 }
 
@@ -80,8 +89,8 @@ void runWifi(){
     Serial.println("Connecting to server socket: ");
     Serial.println(host);
     while(!client.connect(host,port)){
-       Serial.print(".");
-       digitalWrite(D2,HIGH);
+       checkNumberSendToServer();
+       delay(300);
     }
     sendToServer();
       // Ready to read data sent from server
@@ -95,6 +104,7 @@ void runWifi(){
 void sendToServer(){
     // Ready to send data to server
     delay(5);
+    client.write(strengthWifi);
     client.write(humidity);
     client.write(temperature);
     client.write(flameValue0_0);
@@ -110,7 +120,7 @@ void sendToServer(){
 }
 void receiveFromServer(){
   ind = 0;
-    if (client.available() == 12){
+    if (client.available() == 13){
         // Read bytes send from server
       while(client.available()){
        resultFromServer[ind] = client.read();
@@ -120,33 +130,46 @@ void receiveFromServer(){
         // Check if true continue or not send again
       if (checkResultFromServer()){
         Serial.println("Receive data don't match with send data, try send again!");
+        checkNumberSendToServer();
         client.stop();
         runWifi();
       }
     } else {
       Serial.println("Don't receive enough bytes, try send again!");
+      checkNumberSendToServer();
       client.stop();
       runWifi();
     }
 }
 bool checkResultFromServer(){
   // Check whether or not receive bytes match send byte
-  if (resultFromServer[0]!=humidity
-    || resultFromServer[1]!= temperature
-    || resultFromServer[2]!= flameValue0_0
-    || resultFromServer[3]!= flameValue0_1
-    || resultFromServer[4]!= flameValue1_0
-    || resultFromServer[5]!= flameValue1_1
-    || resultFromServer[6]!= lightIntensity0
-    || resultFromServer[7]!= lightIntensity1
-    || resultFromServer[8]!= mq2Value0
-    || resultFromServer[9]!= mq2Value1
-    || resultFromServer[10]!= mq7Value0
-    || resultFromServer[11]!= mq7Value1 ){
+  if ( resultFromServer[0]!=strengthWifi
+    || resultFromServer[1]!=humidity
+    || resultFromServer[2]!= temperature
+    || resultFromServer[3]!= flameValue0_0
+    || resultFromServer[4]!= flameValue0_1
+    || resultFromServer[5]!= flameValue1_0
+    || resultFromServer[6]!= flameValue1_1
+    || resultFromServer[7]!= lightIntensity0
+    || resultFromServer[8]!= lightIntensity1
+    || resultFromServer[9]!= mq2Value0
+    || resultFromServer[10]!= mq2Value1
+    || resultFromServer[11]!= mq7Value0
+    || resultFromServer[12]!= mq7Value1 ){
         return true;
       } else {
         return false;
       }
+}
+void checkNumberSendToServer(){
+  numberSendToServer ++;
+  Serial.print("Number send to server:");
+  Serial.println(numberSendToServer,DEC);
+  if (numberSendToServer >= 10) {
+    digitalWrite(D3,HIGH);
+  } else {
+    digitalWrite(D3,LOW);
+  }
 }
 void comUART(){
       // Begin communicate serial
@@ -199,7 +222,7 @@ void comUART(){
     Serial.println(mq7Value,DEC);
     digitalWrite(D1,LOW);
 }
-void printWifiStatus(){
+void getWifiStatus(){
     // print your WiFi shield's IP address:
   IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
