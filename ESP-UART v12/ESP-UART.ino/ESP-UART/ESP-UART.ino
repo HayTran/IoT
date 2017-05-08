@@ -43,13 +43,15 @@ WiFiClient client;
 void setup() { 
     Serial.begin(115200);
     mySerial.begin(115200);
-      // D1 for UART communiation status
+      // D0 for UART communiation status
+    pinMode(D0,OUTPUT);
+      // D1 for Wifi communication status
     pinMode(D1,OUTPUT);
-      // D2 for Wifi communication status
+      // D2 for Socket communication status
     pinMode(D2,OUTPUT);
-      // D3 for Socket communication status
+      // D3 for reserve
     pinMode(D3,OUTPUT);
-    digitalWrite(D3,LOW);
+    pinMode(D4,OUTPUT);
     WiFi.mode(WIFI_STA);
     wifiSetUp();
 }
@@ -59,7 +61,7 @@ void loop() {
     checkNumberSendToServer();
     comUART();
     runWifi();
-    delay(700);
+    delay(500);
 }
 
 void wifiSetUp(){
@@ -70,9 +72,9 @@ void wifiSetUp(){
     Serial.println(ssid);
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
-     digitalWrite(D2,HIGH);
+     digitalWrite(D4,HIGH);
      delay(400);
-     digitalWrite(D2,LOW);
+     digitalWrite(D4,LOW);
      delay(100);
      Serial.print(".");
    }
@@ -83,7 +85,7 @@ void wifiSetUp(){
 }
 void runWifi(){
       // Use WiFiClient class to create TCP connections
-    digitalWrite(D2,HIGH);
+    digitalWrite(D4,LOW);
       //Increase counter variable 
     delay(20);
     Serial.println("Connecting to server socket: ");
@@ -99,7 +101,7 @@ void runWifi(){
     client.stop();
     delay(5);
     Serial.println("closing connection");
-    digitalWrite(D2,LOW);
+    digitalWrite(D4,HIGH);
 }
 void sendToServer(){
     // Ready to send data to server
@@ -162,18 +164,20 @@ bool checkResultFromServer(){
       }
 }
 void checkNumberSendToServer(){
-  numberSendToServer ++;
+  if(numberSendToServer <=5){
+    numberSendToServer ++;
+  }
   Serial.print("Number send to server:");
   Serial.println(numberSendToServer,DEC);
-  if (numberSendToServer >= 10) {
-    digitalWrite(D3,HIGH);
+  if (numberSendToServer >= 5) {
+    digitalWrite(D1,HIGH);
   } else {
-    digitalWrite(D3,LOW);
+    digitalWrite(D1,LOW);
   }
 }
 void comUART(){
       // Begin communicate serial
-    digitalWrite(D1,HIGH);
+    digitalWrite(D0,LOW);
     byte receiveBytes = 0;
     if (receiveBytes = mySerial.available()) { 
           // Read bytes is not needed
@@ -220,7 +224,7 @@ void comUART(){
     Serial.print("MQ7: ");
     int mq7Value = mq7Value0 + mq7Value1*256;
     Serial.println(mq7Value,DEC);
-    digitalWrite(D1,LOW);
+    digitalWrite(D0,HIGH);
 }
 void getWifiStatus(){
     // print your WiFi shield's IP address:
