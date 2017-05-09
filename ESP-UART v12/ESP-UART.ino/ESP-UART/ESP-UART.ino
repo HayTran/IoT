@@ -14,27 +14,17 @@ const uint16_t port = 8080;
 const char * host = "192.168.1.100"; 
 
   // Variable for storing data sent to Raspberry
-byte humidity = 0;
-byte temperature = 0;
-byte flameValue0_0 = 0; 
-byte flameValue0_1 = 0;
-byte flameValue1_0 = 0;
-byte flameValue1_1 = 0;
-byte lightIntensity0 = 0;
-byte lightIntensity1 = 0;
-byte mq2Value0 = 0;
-byte mq2Value1 = 0;
-byte mq7Value0 = 0;
-byte mq7Value1 = 0;
+byte arrayValue[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
   // Variable for Serial communication with Arduino
 byte countOfArduino = 0;
-const byte NUMBER_BUFFER_BYTE_RECEIVE = 13;
+const byte NUMBER_BUFFER_BYTE_RECEIVE_SERIAL = 17;
 
   // Variables for sequences data between server and client socket
-char resultFromServer[15];
+char resultFromServer[17];
+const byte NUMBER_BYTE_RECEIVE_SOCKET = 17;
 int ind = 0;
-byte numberSendToServer = 0;
+byte numberTrySendToServer = 0;
 
   // Variable for strength of Wifi
 byte strengthWifi = 0;  
@@ -45,20 +35,17 @@ void setup() {
     mySerial.begin(115200);
       // D0 for UART communiation status
     pinMode(D0,OUTPUT);
-      // D1 for Wifi communication status
+      // D1 for alarm
     pinMode(D1,OUTPUT);
-      // D2 for Socket communication status
-    pinMode(D2,OUTPUT);
-      // D3 for reserve
-    pinMode(D3,OUTPUT);
+      // D4 for Wifi communication status
     pinMode(D4,OUTPUT);
     WiFi.mode(WIFI_STA);
     wifiSetUp();
 }
 void loop() {
     getWifiStatus();
-    numberSendToServer = 0;
-    checkNumberSendToServer();
+    numberTrySendToServer = 0;
+    checkNumberTrySendToServer();
     comUART();
     runWifi();
     delay(500);
@@ -91,7 +78,7 @@ void runWifi(){
     Serial.println("Connecting to server socket: ");
     Serial.println(host);
     while(!client.connect(host,port)){
-       checkNumberSendToServer();
+       checkNumberTrySendToServer();
        delay(300);
     }
     sendToServer();
@@ -104,25 +91,17 @@ void runWifi(){
     digitalWrite(D4,HIGH);
 }
 void sendToServer(){
-    // Ready to send data to server
     delay(5);
+      // Send sensor value to server
+    for (int i = 0; i < NUMBER_BYTE_RECEIVE_SOCKET - 1; i++){
+      client.write(arrayValue[i]);
+    }
+      // Send strengthWifi to server
     client.write(strengthWifi);
-    client.write(humidity);
-    client.write(temperature);
-    client.write(flameValue0_0);
-    client.write(flameValue0_1);
-    client.write(flameValue1_0);
-    client.write(flameValue1_1);
-    client.write(lightIntensity0);
-    client.write(lightIntensity1);
-    client.write(mq2Value0);
-    client.write(mq2Value1);
-    client.write(mq7Value0);
-    client.write(mq7Value1);
 }
 void receiveFromServer(){
   ind = 0;
-    if (client.available() == 13){
+    if (client.available() == NUMBER_BYTE_RECEIVE_SOCKET){
         // Read bytes send from server
       while(client.available()){
        resultFromServer[ind] = client.read();
@@ -132,44 +111,41 @@ void receiveFromServer(){
         // Check if true continue or not send again
       if (checkResultFromServer()){
         Serial.println("Receive data don't match with send data, try send again!");
-        checkNumberSendToServer();
+        checkNumberTrySendToServer();
         client.stop();
         runWifi();
       }
     } else {
       Serial.println("Don't receive enough bytes, try send again!");
-      checkNumberSendToServer();
+      checkNumberTrySendToServer();
       client.stop();
       runWifi();
     }
 }
 bool checkResultFromServer(){
-  // Check whether or not receive bytes match send byte
-  if ( resultFromServer[0]!=strengthWifi
-    || resultFromServer[1]!=humidity
-    || resultFromServer[2]!= temperature
-    || resultFromServer[3]!= flameValue0_0
-    || resultFromServer[4]!= flameValue0_1
-    || resultFromServer[5]!= flameValue1_0
-    || resultFromServer[6]!= flameValue1_1
-    || resultFromServer[7]!= lightIntensity0
-    || resultFromServer[8]!= lightIntensity1
-    || resultFromServer[9]!= mq2Value0
-    || resultFromServer[10]!= mq2Value1
-    || resultFromServer[11]!= mq7Value0
-    || resultFromServer[12]!= mq7Value1 ){
-        return true;
-      } else {
-        return false;
+  byte numberFailerCounter = 0;
+    // Check whether or not receive bytes match send byte
+  for (int i = 0 ; i < NUMBER_BYTE_RECEIVE_SOCKET - 1; i++){
+     if ( resultFromServer[i] != arrayValue[i]){
+        numberFailerCounter ++;
       }
+  }
+    // Has a greater failer 
+  if (numberFailerCounter > 0){
+    return true;
+  } else {
+    return false;
+  }
+  Serial.print("Number failer:");
+  Serial.println(numberFailerCounter,DEC);
 }
-void checkNumberSendToServer(){
-  if(numberSendToServer <=5){
-    numberSendToServer ++;
+void checkNumberTrySendToServer(){
+  if(numberTrySendToServer <=5){
+    numberTrySendToServer ++;
   }
   Serial.print("Number send to server:");
-  Serial.println(numberSendToServer,DEC);
-  if (numberSendToServer >= 5) {
+  Serial.println(numberTrySendToServer,DEC);
+  if (numberTrySendToServer >= 5) {
     digitalWrite(D1,HIGH);
   } else {
     digitalWrite(D1,LOW);
@@ -181,22 +157,15 @@ void comUART(){
     byte receiveBytes = 0;
     if (receiveBytes = mySerial.available()) { 
           // Read bytes is not needed
-       for(int i = 0; i < receiveBytes - NUMBER_BUFFER_BYTE_RECEIVE; i++){
+       for(int i = 0; i < receiveBytes - NUMBER_BUFFER_BYTE_RECEIVE_SERIAL; i++){
           byte ingoreByte = mySerial.read();
           Serial.println("#############CLEARED################");
        }
-       temperature = mySerial.read();   
-       humidity = mySerial.read();
-       flameValue0_0 = mySerial.read();
-       flameValue0_1 = mySerial.read();
-       flameValue1_0 = mySerial.read();
-       flameValue1_1 = mySerial.read();
-       lightIntensity0 = mySerial.read();
-       lightIntensity1 = mySerial.read();
-       mq2Value0 = mySerial.read();
-       mq2Value1 = mySerial.read();
-       mq7Value0 = mySerial.read();
-       mq7Value1 = mySerial.read();
+          // Read sensor value
+       for (int i = 0; i < NUMBER_BUFFER_BYTE_RECEIVE_SERIAL - 1; i++){
+          arrayValue[i] = mySerial.read();
+       }
+          // Read arduino nano counter
        countOfArduino = mySerial.read();
     }
     if(resultFromServer[0] >=0){
@@ -205,25 +174,6 @@ void comUART(){
     Serial.print("========================================Count Of Arduino: ");
     Serial.println(countOfArduino,DEC);
     mySerial.flush(); // This action will refresh buffer in serial communication
-    Serial.print("Temperature: ");
-    Serial.println(temperature);
-    Serial.print("Humidity: ");
-    Serial.println(humidity);
-    Serial.print("Flame 1 : ");
-    int flameValue0 = flameValue0_0 + flameValue0_1*256;
-    Serial.println(flameValue0,DEC);
-    int flameValue1 = flameValue1_0 + flameValue1_1*256;
-    Serial.print("Flame 2: ");
-    Serial.println(flameValue1,DEC);
-    Serial.print("Light: ");
-    int lightIntensity = lightIntensity0+ lightIntensity1*256;
-    Serial.println(lightIntensity,DEC);
-    Serial.print("MQ2: ");
-    int mq2Value = mq2Value0 + mq2Value1*256;
-    Serial.println(mq2Value,DEC);
-    Serial.print("MQ7: ");
-    int mq7Value = mq7Value0 + mq7Value1*256;
-    Serial.println(mq7Value,DEC);
     digitalWrite(D0,HIGH);
 }
 void getWifiStatus(){
@@ -252,5 +202,4 @@ void getWifiStatus(){
   Serial.print(strengthWifi);
   Serial.println();
 }
-
 
