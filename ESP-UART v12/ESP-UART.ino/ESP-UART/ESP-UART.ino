@@ -37,10 +37,13 @@ void setup() {
     pinMode(D0,OUTPUT);
       // D1 for alarm
     pinMode(D1,OUTPUT);
+    digitalWrite(D1,HIGH);
       // D4 for Wifi communication status
     pinMode(D4,OUTPUT);
     WiFi.mode(WIFI_STA);
     wifiSetUp();
+    digitalWrite(D0,HIGH);
+    digitalWrite(D4,HIGH);
 }
 void loop() {
     getWifiStatus();
@@ -48,9 +51,7 @@ void loop() {
     checkNumberTrySendToServer();
     comUART();
     runWifi();
-    delay(500);
 }
-
 void wifiSetUp(){
     delay(10);
       // We start by connecting to a WiFi network
@@ -146,35 +147,74 @@ void checkNumberTrySendToServer(){
   Serial.print("Number send to server:");
   Serial.println(numberTrySendToServer,DEC);
   if (numberTrySendToServer >= 5) {
-    digitalWrite(D1,HIGH);
-  } else {
     digitalWrite(D1,LOW);
+  } else {
+    digitalWrite(D1,HIGH);
   }
 }
 void comUART(){
-      // Begin communicate serial
-    digitalWrite(D0,LOW);
-    byte receiveBytes = 0;
-    if (receiveBytes = mySerial.available()) { 
-          // Read bytes is not needed
-       for(int i = 0; i < receiveBytes - NUMBER_BUFFER_BYTE_RECEIVE_SERIAL; i++){
-          byte ingoreByte = mySerial.read();
-          Serial.println("#############CLEARED################");
-       }
-          // Read sensor value
-       for (int i = 0; i < NUMBER_BUFFER_BYTE_RECEIVE_SERIAL - 1; i++){
-          arrayValue[i] = mySerial.read();
-       }
-          // Read arduino nano counter
-       countOfArduino = mySerial.read();
-    }
-    if(resultFromServer[0] >=0){
-           mySerial.write(resultFromServer[0]);
-       }
-    Serial.print("========================================Count Of Arduino: ");
-    Serial.println(countOfArduino,DEC);
-    mySerial.flush(); // This action will refresh buffer in serial communication
-    digitalWrite(D0,HIGH);
+    // Begin communicate serial
+  digitalWrite(D0,LOW);
+    // Send request serial communication to Arduino
+  mySerial.write(128);
+  delay(200);
+    // Block this until receive enough NUMBER_BUFFER_BYTE_RECEIVE_SERIAL bytes
+  while(mySerial.available() <= NUMBER_BUFFER_BYTE_RECEIVE_SERIAL){
+    Serial.println("Waiting Arduino reply.....");
+    mySerial.write(128);
+    delay(200);
+  }
+    // Read sensor value
+  for (int i = 0; i < NUMBER_BUFFER_BYTE_RECEIVE_SERIAL - 1; i++){
+    arrayValue[i] = mySerial.read();
+  }
+    // Read arduino nano counter
+  countOfArduino = mySerial.read();
+  
+    // Show result in console
+  int temperature = 0;
+  temperature = arrayValue[0] + arrayValue[1]*256;  
+  int humidity = 0;
+  humidity = arrayValue[2] + arrayValue[3]*256;
+  int flameValue0 = 0;
+  flameValue0 = arrayValue[4] + arrayValue[5]*256;  
+  int flameValue1 = 0;
+  flameValue1 = arrayValue[6] + arrayValue[7]*256;
+  int flameValue2 = 0;
+  flameValue2 = arrayValue[8] + arrayValue[9]*256;  
+  int flameValue3 = 0;
+  flameValue3 = arrayValue[10] + arrayValue[11]*256;  
+  int lightIntensity = 0;
+  lightIntensity = arrayValue[12] + arrayValue[13]*256;
+  int MQ2 = 0;
+  MQ2 = arrayValue[14] + arrayValue[15]*256;
+  int MQ7 = 0;
+  MQ7 = arrayValue[16] + arrayValue[17]*256;     
+  Serial.print("Temperature: ");
+  Serial.println(temperature,DEC);
+  Serial.print("Humidity: ");
+  Serial.println(humidity,DEC);
+  Serial.print("Flame 0: ");
+  Serial.println(flameValue0,DEC);
+  Serial.print("Flame 1: ");
+  Serial.println(flameValue1,DEC);
+  Serial.print("Flame 2: ");
+  Serial.println(flameValue2,DEC);
+  Serial.print("Flame 3: ");
+  Serial.println(flameValue3,DEC);
+  Serial.print("Light Intensity: ");
+  Serial.println(lightIntensity,DEC);
+  Serial.print("MQ2: ");
+  Serial.println(MQ2,DEC);
+  Serial.print("MQ7: ");
+  Serial.println(MQ7,DEC);
+    // Make sure read out of buffer bytes
+  while(mySerial.available()){
+    mySerial.read();
+  }
+  Serial.print("========================================Count Of Arduino: ");
+  Serial.println(countOfArduino,DEC);
+  digitalWrite(D0,HIGH);
 }
 void getWifiStatus(){
     // print your WiFi shield's IP address:

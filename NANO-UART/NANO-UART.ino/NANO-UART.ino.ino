@@ -7,7 +7,7 @@
 SoftwareSerial mySerial(2,3);  // RX, TX
 byte valueR = 0;
 byte valueW = 255;
-bool a = 1;
+byte enableWrite = 0; /* 0: disableWrite, 1:enableWrite */
 
 // Configure for DHT11
 const int DHTPIN = 4;       // Communicate by one-wire in pin 4 of Arduino
@@ -63,115 +63,85 @@ byte mq7Value0 = 0;
 byte mq7Value1 = 0;
 
 void setup() {
-    Serial.begin(115200);
-    mySerial.begin(115200);
-    pinMode(13,OUTPUT);
-    Serial.println("Beginning...");   
-       // Set up for DTH11
-    dht.begin();
-       // Set up for Flame Sensor   
-    pinMode(FLAME_0_PIN,INPUT);
-    pinMode(FLAME_1_PIN,INPUT);
-    pinMode(FLAME_2_PIN,INPUT);
-    pinMode(FLAME_3_PIN,INPUT);
-      // Set up for MQ 2
-    pinMode(MQ2_PIN,INPUT);
-      // Set up for MQ 7
-    pinMode(MQ7_PIN,INPUT);
-       // Set up for BH1750
-    lightMeter.begin();
+  Serial.begin(115200);
+  mySerial.begin(115200);
+  pinMode(13,OUTPUT);
+  Serial.println("Beginning...");   
+     // Set up for DTH11
+  dht.begin();
+     // Set up for Flame Sensor   
+  pinMode(FLAME_0_PIN,INPUT);
+  pinMode(FLAME_1_PIN,INPUT);
+  pinMode(FLAME_2_PIN,INPUT);
+  pinMode(FLAME_3_PIN,INPUT);
+    // Set up for MQ 2
+  pinMode(MQ2_PIN,INPUT);
+    // Set up for MQ 7
+  pinMode(MQ7_PIN,INPUT);
+     // Set up for BH1750
+  lightMeter.begin();
 }
 void loop() {
-   readDHT();
-   readFlameSensor();
-   readBH1750();
-   readMQ();
-   comUART();
-   delay(1000);
-}
-
-void comUART(){
-  digitalWrite(13,HIGH);
-  delay(10);
-  mySerial.write(temperature);
-  mySerial.write(humidity);
-  mySerial.write(flameValue0_0);
-  mySerial.write(flameValue0_1);
-  mySerial.write(flameValue1_0);
-  mySerial.write(flameValue1_1);
-  mySerial.write(flameValue2_0);
-  mySerial.write(flameValue2_1);
-  mySerial.write(flameValue3_0);
-  mySerial.write(flameValue3_1);
-  mySerial.write(lightIntensity0);
-  mySerial.write(lightIntensity1);
-  mySerial.write(mq2Value0);
-  mySerial.write(mq2Value1);
-  mySerial.write(mq7Value0);
-  mySerial.write(mq7Value1);
-  mySerial.write(valueW);
-  delay(5);
-  byte numberOfBufferReceiveByte = 0;
-  if (numberOfBufferReceiveByte = mySerial.available()) {
-    Serial.print("======================================================== Buffer Receive Byte: ");
-    Serial.println(numberOfBufferReceiveByte,DEC);  // Buffer byte
-    for (int i = 0; i < numberOfBufferReceiveByte - 1; i ++) {
-      int ignoreValue = mySerial.read(); 
-    }
-    valueR = mySerial.read();
+    // Block until receive request from ESP8266
+  while(mySerial.available() <= 0){
   }
-  mySerial.flush(); // This action will refresh buffer in serial communication
-  digitalWrite(13,LOW);
-  valueW--;
-  if(valueW <= 0){
-    valueW = 255;
+    // Read request from ESP8266
+  enableWrite = mySerial.read();
+    // Check whether or not enable Write is right
+  if (enableWrite == 128){
+       // Read sensor value
+    readDHT();
+    readFlameSensor();
+    readBH1750();
+    readMQ();
+    valueW ++;
+    //  Start send to ESP8266
+    mySerial.write(temperature);
+    mySerial.write(humidity);
+    mySerial.write(flameValue0_0);
+    mySerial.write(flameValue0_1);
+    mySerial.write(flameValue1_0);
+    mySerial.write(flameValue1_1);
+    mySerial.write(flameValue2_0);
+    mySerial.write(flameValue2_1);
+    mySerial.write(flameValue3_0);
+    mySerial.write(flameValue3_1);
+    mySerial.write(lightIntensity0);
+    mySerial.write(lightIntensity1);
+    mySerial.write(mq2Value0);
+    mySerial.write(mq2Value1);
+    mySerial.write(mq7Value0);
+    mySerial.write(mq7Value1);
+    mySerial.write(valueW);
   }
-  Serial.print("======================================================== Count of Server: ");
-  Serial.println(valueR,DEC);   // read it and send it out Serial1 (pins 0 & 1)
-  Serial.print("======================================================== Count of Arduino: ");
-  Serial.println(valueW);
-  delay(10);
+    // Make sure don't have any bytes in buffer receive
+  while(mySerial.available()){
+    mySerial.read();
+  }
+  Serial.println("Sent data to ESP8266");
 }
 void readFlameSensor(){
-    flameValue0 = analogRead(FLAME_0_PIN);
-    flameValue1 = analogRead(FLAME_1_PIN);
-    flameValue2 = analogRead(FLAME_2_PIN);
-    flameValue3 = analogRead(FLAME_3_PIN);
-    flameValue0_0 = flameValue0 % 256;
-    flameValue0_1 = flameValue0 / 256;
-    flameValue1_0 = flameValue1 % 256;
-    flameValue1_1 = flameValue1 / 256; 
-    flameValue2_0 = flameValue2 % 256;
-    flameValue2_1 = flameValue2 / 256;
-    flameValue3_0 = flameValue3 % 256;
-    flameValue3_1 = flameValue3 / 256; 
-    Serial.print("Flame sensor 0: ");
-    Serial.println(flameValue0); 
-    Serial.print("Flame sensor 1: ");
-    Serial.println(flameValue1);
-    Serial.print("Flame sensor 2: ");
-    Serial.println(flameValue2); 
-    Serial.print("Flame sensor 3: ");
-    Serial.println(flameValue3);  
-    delay(10);      
+  flameValue0 = analogRead(FLAME_0_PIN);
+  flameValue1 = analogRead(FLAME_1_PIN);
+  flameValue2 = analogRead(FLAME_2_PIN);
+  flameValue3 = analogRead(FLAME_3_PIN);
+  flameValue0_0 = flameValue0 % 256;
+  flameValue0_1 = flameValue0 / 256;
+  flameValue1_0 = flameValue1 % 256;
+  flameValue1_1 = flameValue1 / 256; 
+  flameValue2_0 = flameValue2 % 256;
+  flameValue2_1 = flameValue2 / 256;
+  flameValue3_0 = flameValue3 % 256;
+  flameValue3_1 = flameValue3 / 256;      
 }
 void readDHT(){
-    humidity = dht.readHumidity();   
-    temperature = dht.readTemperature(); 
-    Serial.print("Temperature: ");
-    Serial.println(temperature);               
-    Serial.print("Humidity: ");
-    Serial.println(humidity);               
-    delay(10);
+  humidity = dht.readHumidity();   
+  temperature = dht.readTemperature();             
 }
 void readBH1750(){
   lightIntensity = lightMeter.readLightLevel();
   lightIntensity0 = lightIntensity % 256;
   lightIntensity1 = lightIntensity / 256;
-  Serial.print("Light: ");
-  Serial.print(lightIntensity);
-  Serial.println(" lux");
-  delay(10);
 }
 void readMQ(){
   mq2Value = analogRead(MQ2_PIN);
@@ -179,11 +149,6 @@ void readMQ(){
   mq2Value0 = mq2Value % 256;
   mq2Value1 = mq2Value / 256;
   mq7Value0 = mq7Value % 256;
-  mq7Value1 = mq7Value / 256;
-  Serial.print("MQ2: ");
-  Serial.println(mq2Value);
-  Serial.print("MQ7: ");
-  Serial.println(mq7Value);
-  delay(10);      
+  mq7Value1 = mq7Value / 256;      
 }
 
