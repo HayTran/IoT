@@ -18,11 +18,28 @@ byte arrayValue[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
   // Variable for Serial communication with Arduino
 byte countOfArduino = 0;
-const byte NUMBER_BUFFER_BYTE_RECEIVE_SERIAL = 17;
+const byte NUMBER_BUFFER_BYTES_RECEIVE_SERIAL = 17;
 
-  // Variables for sequences data between server and client socket
+  // Variables for communication protocal regulation between server and client socket
 char resultFromServer[17];
-const byte NUMBER_BYTE_RECEIVE_SOCKET = 17;
+const byte BEGIN_SESSION_FLAG = 110;
+const byte FIRST_CONFIRM_SESSION_FLAG = 120;      
+const byte SECOND_CONFIRM_SESSION_FLAG = 130;
+const byte END_CONFIRM_SESSION_FLAG = 140;
+const byte RESULT_SESSION_FLAG = 150;
+const byte REPLY_ALIVE_FLAG = 101;
+const byte REQUEST_ALIVE_FLAG = 201; 
+/**
+ *  Corresponding with NODE_TYPE, it will send to server 18 bytes
+ *  16 bytes for sensor data, 1 byte be intended for strengthWifi
+ */
+const byte BEGIN_SESSION_BYTE = 19;      
+/**
+ * 16 bytes for sensor data, 1 byte strengthWifi and 1 byte for first confirm session
+ */
+const byte FIRST_CONFIRM_SESSION_BYTE = 20;
+const byte SECOND_CONFRIM_SESSION_BYTE = 1;
+
 int ind = 0;
 byte numberTrySendToServer = 0;
 
@@ -82,51 +99,72 @@ void runWifi(){
        checkNumberTrySendToServer();
        delay(300);
     }
-    sendToServer();
+    beginSession();
       // Ready to read data sent from server
     delay(30);
-    receiveFromServer();
-    client.stop();
+    processSession();
     delay(5);
     Serial.println("closing connection");
     digitalWrite(D4,HIGH);
 }
-void sendToServer(){
+void beginSession(){
     delay(5);
+    client.write(BEGIN_SESSION_FLAG);
+    client.write(BEGIN_SESSION_BYTE);   //  BEGIN_SESSION_BYTE is relevant NodeType
       // Send sensor value to server
-    for (int i = 0; i < NUMBER_BYTE_RECEIVE_SOCKET - 1; i++){
+    for (int i = 0; i < BEGIN_SESSION_BYTE - 1; i++){  
       client.write(arrayValue[i]);
     }
       // Send strengthWifi to server
     client.write(strengthWifi);
 }
-void receiveFromServer(){
-  ind = 0;
-    if (client.available() == NUMBER_BYTE_RECEIVE_SOCKET){
-        // Read bytes send from server
+void processSession(){
+  Serial.print("client.available after: ");
+  Serial.println(client.available(),DEC);
+  if (client.available() == FIRST_CONFIRM_SESSION_BYTE) {
+    byte flag = client.read();
+    if (flag == FIRST_CONFIRM_SESSION_FLAG) {   // Read first byte and check what confirm is that?
+      Serial.print("client.available before: ");
+      Serial.println(client.available(),DEC);
+      Serial.print("flag: ");
+      Serial.println(flag,DEC);
+      ind = 0;
       while(client.available()){
-       resultFromServer[ind] = client.read();
-       ind++;
-       delay(5);
+         resultFromServer[ind] = client.read();
+         ind++;
+         delay(5);
       }
-        // Check if true continue or not send again
+        // Check if true is continue or not begin again
       if (checkResultFromServer()){
-        Serial.println("Receive data don't match with send data, try send again!");
-        checkNumberTrySendToServer();
-        client.stop();
-        runWifi();
+          Serial.println("Receive data don't match with send data, try send again!");
+          checkNumberTrySendToServer();
+          client.stop();
+          runWifi();
+      } else {
+          // Confirm to server
+         Serial.println("Confirm to server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+         client.stop();
+         while(!client.connect(host,port)){
+           checkNumberTrySendToServer();
+           delay(300);
+         }
+         client.write(SECOND_CONFIRM_SESSION_FLAG);
+         client.write(SECOND_CONFRIM_SESSION_BYTE);
+         client.write(RESULT_SESSION_FLAG);
+         client.stop();
       }
-    } else {
-      Serial.println("Don't receive enough bytes, try send again!");
-      checkNumberTrySendToServer();
-      client.stop();
-      runWifi();
     }
+  } else {
+    Serial.println("Don't receive enough bytes, try send again!");
+    checkNumberTrySendToServer();
+    client.stop();
+    runWifi(); 
+  }
 }
 bool checkResultFromServer(){
   byte numberFailerCounter = 0;
     // Check whether or not receive bytes match send byte
-  for (int i = 0 ; i < NUMBER_BYTE_RECEIVE_SOCKET - 1; i++){
+  for (int i = 0 ; i < FIRST_CONFIRM_SESSION_BYTE - 1; i++){    // <-- Just read 16 first bytes, 1 byte remain is of strengthWifi, don't need comparing them
      if ( resultFromServer[i] != arrayValue[i]){
         numberFailerCounter ++;
       }
@@ -159,13 +197,13 @@ void comUART(){
   mySerial.write(128);
   delay(200);
     // Block this until receive enough NUMBER_BUFFER_BYTE_RECEIVE_SERIAL bytes
-  while(mySerial.available() <= NUMBER_BUFFER_BYTE_RECEIVE_SERIAL){
-    Serial.println("Waiting Arduino reply.....");
+  while(mySerial.available() <= NUMBER_BUFFER_BYTES_RECEIVE_SERIAL){
+//    Serial.println("Waiting Arduino reply.....");
     mySerial.write(128);
     delay(200);
   }
     // Read sensor value
-  for (int i = 0; i < NUMBER_BUFFER_BYTE_RECEIVE_SERIAL - 1; i++){
+  for (int i = 0; i < NUMBER_BUFFER_BYTES_RECEIVE_SERIAL - 1; i++){
     arrayValue[i] = mySerial.read();
   }
     // Read arduino nano counter
@@ -190,38 +228,34 @@ void comUART(){
   MQ2 = arrayValue[14] + arrayValue[15]*256;
   int MQ7 = 0;
   MQ7 = arrayValue[16] + arrayValue[17]*256;     
-  Serial.print("Temperature: ");
-  Serial.println(temperature,DEC);
-  Serial.print("Humidity: ");
-  Serial.println(humidity,DEC);
-  Serial.print("Flame 0: ");
-  Serial.println(flameValue0,DEC);
-  Serial.print("Flame 1: ");
-  Serial.println(flameValue1,DEC);
-  Serial.print("Flame 2: ");
-  Serial.println(flameValue2,DEC);
-  Serial.print("Flame 3: ");
-  Serial.println(flameValue3,DEC);
-  Serial.print("Light Intensity: ");
-  Serial.println(lightIntensity,DEC);
-  Serial.print("MQ2: ");
-  Serial.println(MQ2,DEC);
-  Serial.print("MQ7: ");
-  Serial.println(MQ7,DEC);
-    // Make sure read out of buffer bytes
+      // Make sure read out of buffer bytes
   while(mySerial.available()){
     mySerial.read();
   }
-  Serial.print("========================================Count Of Arduino: ");
-  Serial.println(countOfArduino,DEC);
+//  Serial.print("Temperature: ");
+//  Serial.println(temperature,DEC);
+//  Serial.print("Humidity: ");
+//  Serial.println(humidity,DEC);
+//  Serial.print("Flame 0: ");
+//  Serial.println(flameValue0,DEC);
+//  Serial.print("Flame 1: ");
+//  Serial.println(flameValue1,DEC);
+//  Serial.print("Flame 2: ");
+//  Serial.println(flameValue2,DEC);
+//  Serial.print("Flame 3: ");
+//  Serial.println(flameValue3,DEC);
+//  Serial.print("Light Intensity: ");
+//  Serial.println(lightIntensity,DEC);
+//  Serial.print("MQ2: ");
+//  Serial.println(MQ2,DEC);
+//  Serial.print("MQ7: ");
+//  Serial.println(MQ7,DEC);
+//  Serial.print("========================================Count Of Arduino: ");
+//  Serial.println(countOfArduino,DEC);
   digitalWrite(D0,HIGH);
 }
 void getWifiStatus(){
-    // print your WiFi shield's IP address:
   IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
     // print the received signal strength:
   long rssi = WiFi.RSSI();
   if (rssi < -30 && rssi > -65) {
@@ -235,11 +269,14 @@ void getWifiStatus(){
   } else if (rssi > -90) {
     strengthWifi = 1;
   }
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.print(" dBm");
-  Serial.print(", ");
-  Serial.print(strengthWifi);
-  Serial.println();
+    // print your WiFi shield's IP address:
+//  Serial.print("IP Address: ");
+//  Serial.println(ip);
+//  Serial.print("signal strength (RSSI):");
+//  Serial.print(rssi);
+//  Serial.print(" dBm");
+//  Serial.print(", ");
+//  Serial.print(strengthWifi);
+//  Serial.println();
 }
 
