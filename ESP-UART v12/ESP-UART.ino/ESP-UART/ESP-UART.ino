@@ -21,12 +21,13 @@ byte countOfArduino = 0;
 const byte NUMBER_BUFFER_BYTES_RECEIVE_SERIAL = 17;
 
   // Variables for communication protocal regulation between server and client socket
-char resultFromServer[8];
+char resultFromServer[20];
 const byte BEGIN_SESSION_FLAG = 110;
 const byte FIRST_CONFIRM_SESSION_FLAG = 120;      
 const byte SECOND_CONFIRM_SESSION_FLAG = 130;
 const byte END_CONFIRM_SESSION_FLAG = 140;
-const byte RESULT_SESSION_FLAG = 150;
+const byte SUCCESS_SESSION_FLAG = 150;
+const byte FAILED_SESSION_FLAG = 160;
 const byte REPLY_ALIVE_FLAG = 101;
 const byte REQUEST_ALIVE_FLAG = 201; 
 /**
@@ -68,6 +69,7 @@ void loop() {
     checkNumberTrySendToServer();
     comUART();
     runWifi();
+    delay(300);
 }
 void wifiSetUp(){
     delay(10);
@@ -119,47 +121,48 @@ void beginSession(){
     client.write(strengthWifi);
 }
 void processSession(){
-  Serial.print("client.available after: ");
-  Serial.println(client.available(),DEC);
   if (client.available() == FIRST_CONFIRM_SESSION_SENSOR_BYTE) {
     byte flag = client.read();
     if (flag == FIRST_CONFIRM_SESSION_FLAG) {   // Read first byte and check what confirm is that?
-      Serial.print("client.available before: ");
-      Serial.println(client.available(),DEC);
-      Serial.print("flag: ");
-      Serial.println(flag,DEC);
       ind = 0;
       while(client.available()){
          resultFromServer[ind] = client.read();
          ind++;
          delay(5);
       }
+      client.stop();
         // Check if true is continue or not begin again
       if (checkResultFromServer()){
           Serial.println("Receive data don't match with send data, try send again!");
           checkNumberTrySendToServer();
-          client.stop();
-          runWifi();
+//          runWifi();
+          secondSession(false);
       } else {
-          // Confirm to server
-         Serial.println("Confirm to server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-         client.stop();
-         while(!client.connect(host,port)){
-           checkNumberTrySendToServer();
-           delay(300);
-         }
-         client.write(SECOND_CONFIRM_SESSION_FLAG);
-         client.write(SECOND_CONFRIM_SESSION_SENSOR_BYTE);
-         client.write(RESULT_SESSION_FLAG);
-         client.stop();
+          secondSession(true);
       }
     }
   } else {
     Serial.println("Don't receive enough bytes, try send again!");
     checkNumberTrySendToServer();
-    client.stop();
-    runWifi(); 
+//    runWifi();
+    secondSession(false); 
   }
+}
+void secondSession(boolean isSuccess){
+        // Confirm to server
+   Serial.println("Confirm to server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+   while(!client.connect(host,port)){
+     checkNumberTrySendToServer();
+     delay(300);
+   }
+   client.write(SECOND_CONFIRM_SESSION_FLAG);
+   client.write(SECOND_CONFRIM_SESSION_SENSOR_BYTE);
+   if (isSuccess == true) {
+      client.write(SUCCESS_SESSION_FLAG);
+   } else {
+      client.write(FAILED_SESSION_FLAG);
+   }
+   client.stop();
 }
 bool checkResultFromServer(){
   byte numberFailerCounter = 0;
@@ -185,7 +188,7 @@ void checkNumberTrySendToServer(){
   Serial.print("Number send to server:");
   Serial.println(numberTrySendToServer,DEC);
   if (numberTrySendToServer >= 5) {
-    digitalWrite(D1,LOW);
+//    digitalWrite(D1,LOW);
   } else {
     digitalWrite(D1,HIGH);
   }

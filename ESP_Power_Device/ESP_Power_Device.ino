@@ -19,7 +19,8 @@ const byte BEGIN_SESSION_FLAG = 110;
 const byte FIRST_CONFIRM_SESSION_FLAG = 120;      
 const byte SECOND_CONFIRM_SESSION_FLAG = 130;
 const byte END_CONFIRM_SESSION_FLAG = 140;
-const byte RESULT_SESSION_FLAG = 150;
+const byte SUCCESS_SESSION_FLAG = 150;
+const byte FAILED_SESSION_FLAG = 160;
 const byte REPLY_ALIVE_FLAG = 101;
 const byte REQUEST_ALIVE_FLAG = 201; 
 /**
@@ -44,17 +45,23 @@ WiFiClient client;
 void setup() { 
     Serial.begin(115200);
     mySerial.begin(115200);
-      // D0 for UART communiation status
-    pinMode(D0,OUTPUT);
-      // D1 for alarm
-    pinMode(D1,OUTPUT);
-    digitalWrite(D1,LOW);
-    pinMode(D2,OUTPUT);
-    digitalWrite(D2,LOW);
-      // D4 for Wifi communication status
-    pinMode(D4,OUTPUT);
     WiFi.mode(WIFI_STA);
     wifiSetUp();
+    Serial.println("############################################################## Set up");
+      // D0 for UART communiation status
+     pinMode(D0,OUTPUT);
+    digitalWrite(D0,HIGH);
+    pinMode(D1,OUTPUT);
+    digitalWrite(D1,LOW);
+      // D1 for alarm
+    pinMode(D2,OUTPUT);
+    digitalWrite(D2,LOW);
+    pinMode(D3,OUTPUT);
+    digitalWrite(D3,LOW);
+    pinMode(D5,OUTPUT);
+    digitalWrite(D5,LOW);
+      // D4 for Wifi communication status
+    pinMode(D4,OUTPUT);
     digitalWrite(D0,HIGH);
     digitalWrite(D4,HIGH);
 }
@@ -92,6 +99,7 @@ void runWifi(){
     Serial.println(host);
     while(!client.connect(host,port)){
        delay(300);
+       Serial.println("======================================================= Connecting to server");
     }
     beginSession();
       // Ready to read data sent from server
@@ -111,17 +119,16 @@ void processSession(){
   if (client.available() == FIRST_CONFIRM_SESSION_POWDEV_BYTE) {
     byte flag = client.read();
     if (flag == FIRST_CONFIRM_SESSION_FLAG) {   // Read first byte and check what confirm is that?
-      Serial.print("client.available before: ");
-      ind = 0;
-      while(client.available()){
-         receivedArray[ind] = client.read();
-         ind++;
-         delay(5);
-      }
-      // stop a first confirm session
-      client.stop();
-      // begin second confirm session
-      secondSession();
+        ind = 0;
+        while(client.available()){
+           receivedArray[ind] = client.read();
+           ind++;
+           delay(5);
+        }
+        // stop a first confirm session
+        client.stop();
+        // begin second confirm session
+        secondSession();
     }
   } else {
     Serial.println("Don't receive enough bytes, try send again!");
@@ -133,6 +140,7 @@ void secondSession(){
     // begin a second confirm session
   while(!client.connect(host,port)){
     delay(300);
+    Serial.println("======================================================= Connecting to server");
   }
   client.write(SECOND_CONFIRM_SESSION_FLAG);
   client.write(SECOND_CONFRIM_SESSION_POWDEV_BYTE);
@@ -143,10 +151,22 @@ void secondSession(){
   int resultCode1 = client.read();
   int resultCode2 = client.read();
   client.stop();
-  Serial.print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& Result code1:");
-  Serial.println(resultCode1,DEC);
-  Serial.print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& Result code2:");
-  Serial.println(resultCode2,DEC);
+  if (resultCode1 == END_CONFIRM_SESSION_FLAG) {
+    if (resultCode2 == SUCCESS_SESSION_FLAG) {
+        Serial.println("Success, using result to IO...");
+        digitalWrite(D1,receivedArray[0]);
+        digitalWrite(D2,receivedArray[1]);
+        digitalWrite(D3,receivedArray[2]);
+        digitalWrite(D5,receivedArray[3]);
+    } else if (resultCode2 == FAILED_SESSION_FLAG){
+        Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Failed!! Trying again");
+    } else {
+        Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Failed with unknow error");
+    }
+  } 
+  else {
+      Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Server reply wrong!!!");
+  }
 }
 void getWifiStatus(){
   IPAddress ip = WiFi.localIP();
