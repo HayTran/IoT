@@ -40,6 +40,9 @@ byte numberTrySendToServer = 0;
 
   // Variable for strength of Wifi
 byte strengthWifi = 0;  
+  // Variable for communication with Module sim800L
+SoftwareSerial sim808(D6,D7);    // RX, TX
+String SDT="0973832930";
 
 WiFiClient client;
 void setup() { 
@@ -52,14 +55,10 @@ void setup() {
      pinMode(D0,OUTPUT);
     digitalWrite(D0,HIGH);
     pinMode(D1,OUTPUT);
-    digitalWrite(D1,LOW);
+    digitalWrite(D1,HIGH);
       // D1 for alarm
     pinMode(D2,OUTPUT);
-    digitalWrite(D2,LOW);
-    pinMode(D3,OUTPUT);
-    digitalWrite(D3,LOW);
-    pinMode(D5,OUTPUT);
-    digitalWrite(D5,LOW);
+    digitalWrite(D2,HIGH);
       // D4 for Wifi communication status
     pinMode(D4,OUTPUT);
     digitalWrite(D0,HIGH);
@@ -154,10 +153,10 @@ void secondSession(){
   if (resultCode1 == END_CONFIRM_SESSION_FLAG) {
     if (resultCode2 == SUCCESS_SESSION_FLAG) {
         Serial.println("Success, using result to IO...");
-        digitalWrite(D1,receivedArray[0]);
-        digitalWrite(D2,receivedArray[1]);
-        digitalWrite(D3,receivedArray[2]);
-        digitalWrite(D5,receivedArray[3]);
+        if (receivedArray[2]){
+          sendSMS(receivedArray[2]);
+        }
+        switchDevice();
     } else if (resultCode2 == FAILED_SESSION_FLAG){
         Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Failed!! Trying again");
     } else {
@@ -167,6 +166,26 @@ void secondSession(){
   else {
       Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Server reply wrong!!!");
   }
+}
+void switchDevice(){
+   digitalWrite(D1,receivedArray[0]);
+   digitalWrite(D2,receivedArray[1]);
+}
+void sendSMS(int number){
+  Serial.println("Sending SMS");
+  delay(500);
+  at("AT",100);
+  at("AT+CMGF=1",50);
+  at("AT+CSCS=\"GSM\"",50);
+  at("AT+CMGS=\"" + SDT+"\"",50);
+  at("Dev1 and Dev2 is on: " + String(number),300);
+  sim808.write(26);     // ctlr+Z
+  Serial.println("Send SMS finished");
+  delay(1000);
+}
+void at(String _atcm,unsigned long _dl){
+  sim808.print(_atcm+"\r\n");
+  delay(_dl);
 }
 void getWifiStatus(){
   IPAddress ip = WiFi.localIP();
