@@ -95,7 +95,7 @@ void loop() {
     readBH1750();
     readMQ();
     valueW ++;
-    //  Start send to ESP8266
+      //  Start send to ESP8266
     mySerial.write(temperature);
     mySerial.write(humidity);
     mySerial.write(flameValue0_0);
@@ -114,11 +114,8 @@ void loop() {
     mySerial.write(mq7Value1);
     mySerial.write(valueW);
   }
-    // Make sure don't have any bytes in buffer receive
-  while(mySerial.available()){
-    mySerial.read();
-  }
   Serial.println("Sent data to ESP8266");
+   Serial.println("===========================");
 }
 void readFlameSensor(){
   flameValue0 = analogRead(FLAME_0_PIN);

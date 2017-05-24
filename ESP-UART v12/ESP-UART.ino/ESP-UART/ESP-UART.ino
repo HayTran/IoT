@@ -135,7 +135,6 @@ void processSession(){
       if (checkResultFromServer()){
           Serial.println("Receive data don't match with send data, try send again!");
           checkNumberTrySendToServer();
-//          runWifi();
           secondSession(false);
       } else {
           secondSession(true);
@@ -144,7 +143,6 @@ void processSession(){
   } else {
     Serial.println("Don't receive enough bytes, try send again!");
     checkNumberTrySendToServer();
-//    runWifi();
     secondSession(false); 
   }
 }
@@ -165,21 +163,21 @@ void secondSession(boolean isSuccess){
    client.stop();
 }
 bool checkResultFromServer(){
-  byte numberFailerCounter = 0;
+  byte numberFailedByteCounter = 0;
     // Check whether or not receive bytes match send byte
-  for (int i = 0 ; i < FIRST_CONFIRM_SESSION_SENSOR_BYTE - 2; i++){    // <-- Just read 16 first bytes, 1 byte remain is of strengthWifi, don't need comparing them. 18 - (1 flag  + 1 strengthWifi)
-     if ( resultFromServer[i] != arrayValue[i]){
-        numberFailerCounter ++;
+  for (int i = 0 ; i < FIRST_CONFIRM_SESSION_SENSOR_BYTE - 2; i++){    // <-- Just read 16 first bytes, 1 byte remain is of strengthWifi,                                                      
+     if ( resultFromServer[i] != arrayValue[i]){                       // don't need comparing them. 18 - (1 flag  + 1 strengthWifi)
+        numberFailedByteCounter ++;
       }
   }
+  Serial.print("Number failed byte counter:");
+  Serial.println(numberFailedByteCounter,DEC);
     // Has a greater failer 
-  if (numberFailerCounter > 0){
+  if (numberFailedByteCounter > 0){
     return true;
   } else {
     return false;
   }
-  Serial.print("Number failer:");
-  Serial.println(numberFailerCounter,DEC);
 }
 void checkNumberTrySendToServer(){
   if(numberTrySendToServer <=5){
@@ -187,8 +185,8 @@ void checkNumberTrySendToServer(){
   }
   Serial.print("Number send to server:");
   Serial.println(numberTrySendToServer,DEC);
-  if (numberTrySendToServer >= 5) {
-//    digitalWrite(D1,LOW);
+  if (numberTrySendToServer >= 10) {
+    digitalWrite(D1,LOW);
   } else {
     digitalWrite(D1,HIGH);
   }
@@ -200,10 +198,10 @@ void comUART(){
   mySerial.write(128);
   delay(200);
     // Block this until receive enough NUMBER_BUFFER_BYTE_RECEIVE_SERIAL bytes
-  while(mySerial.available() <= NUMBER_BUFFER_BYTES_RECEIVE_SERIAL){
+  while(mySerial.available() < NUMBER_BUFFER_BYTES_RECEIVE_SERIAL){
     Serial.println("Waiting Arduino reply.....");
-    mySerial.write(128);
     delay(200);
+    mySerial.write(128);
   }
     // Read sensor value
   for (int i = 0; i < NUMBER_BUFFER_BYTES_RECEIVE_SERIAL - 1; i++){

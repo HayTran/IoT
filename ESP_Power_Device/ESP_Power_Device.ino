@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <SoftwareSerial.h>
+#include <EEPROM.h>
 
   // Set up software serial for ESP
 SoftwareSerial mySerial(D6,D7); // RX, TX
@@ -25,14 +26,14 @@ const byte REPLY_ALIVE_FLAG = 101;
 const byte REQUEST_ALIVE_FLAG = 201; 
 /**
  *  Corresponding with NODE_TYPE, it will send to server 18 bytes
- *  1 byte for flag, 1 byte for its capacity
+ *  1 byte for flag, 1 byte for its capacity, 6 byte data
  */
-const byte BEGIN_SESSION_POWDEV_BYTE = 2;      
+const byte BEGIN_SESSION_POWDEV_BYTE = 8;      
 /**
  * 4 bytes for powdev data, 1 byte for first confirm session flags
  */
-const byte FIRST_CONFIRM_SESSION_POWDEV_BYTE = 5;
-const byte SECOND_CONFRIM_SESSION_POWDEV_BYTE = 6;
+const byte FIRST_CONFIRM_SESSION_POWDEV_BYTE = 6;
+const byte SECOND_CONFRIM_SESSION_POWDEV_BYTE = 7;
 const byte END_CONFRIM_SESSION_POWDEV_BYTE = 1;
 
 int ind = 0;
@@ -43,32 +44,56 @@ byte strengthWifi = 0;
   // Variable for communication with Module sim800L
 SoftwareSerial sim808(D6,D7);    // RX, TX
 String SDT="0973832930";
-
+  // Declare for controller
+byte dev0 = 1, dev1 = 1, buzzer = 1, sim0 = 1, sim1 = 1; 
 WiFiClient client;
 void setup() { 
+      // get resume from EEPROM
+    getResume();
+      // D0 for UART communiation status
+    pinMode(D0,OUTPUT);
+    digitalWrite(D0,LOW);
+      // D4 for Wifi communication status
+    pinMode(D4,OUTPUT);
+    digitalWrite(D4,HIGH);
+      // D5, D8 for controller
+    pinMode(D5,INPUT);
+    pinMode(D8,INPUT);
+      // Set up for Serial communication
     Serial.begin(115200);
     mySerial.begin(115200);
+      // Set up for wifi
     WiFi.mode(WIFI_STA);
     wifiSetUp();
     Serial.println("############################################################## Set up");
-      // D0 for UART communiation status
-     pinMode(D0,OUTPUT);
     digitalWrite(D0,HIGH);
-    pinMode(D1,OUTPUT);
-    digitalWrite(D1,HIGH);
-      // D1 for alarm
-    pinMode(D2,OUTPUT);
-    digitalWrite(D2,HIGH);
-      // D4 for Wifi communication status
-    pinMode(D4,OUTPUT);
-    digitalWrite(D0,HIGH);
-    digitalWrite(D4,HIGH);
 }
 void loop() {
     getWifiStatus();
     numberTrySendToServer = 0;
     runWifi();
     delay(500);
+}
+void getResume(){
+      // D1, D2 for relay
+    pinMode(D1,OUTPUT);
+    pinMode(D2,OUTPUT);
+      // D3 for buzzer 
+    pinMode(D3,OUTPUT);
+    EEPROM.begin(4);
+    dev0 = EEPROM.read(0);
+    dev1 = EEPROM.read(1);
+    buzzer = EEPROM.read(2);
+    sim0 = EEPROM.read(3);
+    sim1 = EEPROM.read(4);
+    receivedArray[0] = dev0;
+    receivedArray[1] = dev1;
+    receivedArray[2] = buzzer;
+    receivedArray[3] = sim0;
+    receivedArray[4] = sim1;
+    digitalWrite(D1,dev0);
+    digitalWrite(D2,dev1);
+    digitalWrite(D3,buzzer);
 }
 void wifiSetUp(){
     delay(10);
@@ -113,6 +138,11 @@ void beginSession(){
     client.write(BEGIN_SESSION_FLAG);
     client.write(BEGIN_SESSION_POWDEV_BYTE);   //  BEGIN_SESSION_POWDEV_BYTE is relevant NodeType
     client.write(strengthWifi);
+    client.write(dev0);
+    client.write(dev1);
+    client.write(buzzer);
+    client.write(sim0);
+    client.write(sim1);
 }
 void processSession(){
   if (client.available() == FIRST_CONFIRM_SESSION_POWDEV_BYTE) {
@@ -153,10 +183,7 @@ void secondSession(){
   if (resultCode1 == END_CONFIRM_SESSION_FLAG) {
     if (resultCode2 == SUCCESS_SESSION_FLAG) {
         Serial.println("Success, using result to IO...");
-        if (receivedArray[2]){
-          sendSMS(receivedArray[2]);
-        }
-        switchDevice();
+        checkStatus();
     } else if (resultCode2 == FAILED_SESSION_FLAG){
         Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Failed!! Trying again");
     } else {
@@ -164,24 +191,49 @@ void secondSession(){
     }
   } 
   else {
-      Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Server reply wrong!!!");
+      Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Server reply wrong!!! R1,R2");
+      Serial.println(resultCode1,DEC);
+      Serial.println(resultCode1,DEC);
+      Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
   }
 }
-void switchDevice(){
-   digitalWrite(D1,receivedArray[0]);
-   digitalWrite(D2,receivedArray[1]);
+void checkStatus(){
+  if (receivedArray[0] != dev0 
+      || receivedArray[1] != dev1
+      || receivedArray[2] != buzzer 
+      || receivedArray[3] != sim0
+      || receivedArray[4] != sim1){
+            // Update for variable when has change
+          dev0 = receivedArray[0]; 
+          dev1 = receivedArray[1];
+          buzzer = receivedArray[2];
+          sim0 = receivedArray[3];
+          sim1 = receivedArray[4];
+            //  Update into EEPROM
+          for (byte i = 0; i < 5; i ++){
+            EEPROM.write(i,receivedArray[i]);
+            delay(5);
+          }
+          EEPROM.commit();
+          Serial.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Write into EEPROM");
+          digitalWrite(D1,dev0);
+          digitalWrite(D2,dev1);
+          digitalWrite(D3,buzzer);
+      }
 }
-void sendSMS(int number){
+void SIM(){
   Serial.println("Sending SMS");
-  delay(500);
-  at("AT",100);
-  at("AT+CMGF=1",50);
-  at("AT+CSCS=\"GSM\"",50);
-  at("AT+CMGS=\"" + SDT+"\"",50);
-  at("Dev1 and Dev2 is on: " + String(number),300);
-  sim808.write(26);     // ctlr+Z
-  Serial.println("Send SMS finished");
-  delay(1000);
+//  delay(500);
+//  at("AT",100);
+//  at("AT+CMGF=1",50);
+//  at("AT+CSCS=\"GSM\"",50);
+//  at("AT+CMGS=\"" + SDT+"\"",50);
+//  at("Dev1 and Dev2 is on: " + String(number),300);
+//  sim808.write(26);     // ctlr+Z
+//  Serial.println("Send SMS finished");
+// delay(1000);
+  at("ATD"+SDT+";",10);
+ 
 }
 void at(String _atcm,unsigned long _dl){
   sim808.print(_atcm+"\r\n");
@@ -202,14 +254,5 @@ void getWifiStatus(){
   } else if (rssi > -90) {
     strengthWifi = 1;
   }
-    // print your WiFi shield's IP address:
-//  Serial.print("IP Address: ");
-//  Serial.println(ip);
-//  Serial.print("signal strength (RSSI):");
-//  Serial.print(rssi);
-//  Serial.print(" dBm");
-//  Serial.print(", ");
-//  Serial.print(strengthWifi);
-//  Serial.println();
 }
 
