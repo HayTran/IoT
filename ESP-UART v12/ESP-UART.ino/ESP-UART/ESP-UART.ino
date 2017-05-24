@@ -11,7 +11,7 @@ int status = WL_IDLE_STATUS;
 
   // Variable for connect to Socket Server
 const uint16_t port = 8080;         
-const char * host = "192.168.1.100"; 
+const char * host = "192.168.1.200"; 
 
   // Variable for storing data sent to Raspberry
 byte arrayValue[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -270,14 +270,5 @@ void getWifiStatus(){
   } else if (rssi > -90) {
     strengthWifi = 1;
   }
-    // print your WiFi shield's IP address:
-//  Serial.print("IP Address: ");
-//  Serial.println(ip);
-//  Serial.print("signal strength (RSSI):");
-//  Serial.print(rssi);
-//  Serial.print(" dBm");
-//  Serial.print(", ");
-//  Serial.print(strengthWifi);
-//  Serial.println();
 }
 

@@ -12,7 +12,7 @@ int status = WL_IDLE_STATUS;
 
   // Variable for connect to Socket Server
 const uint16_t port = 8080;         
-const char * host = "192.168.1.100"; 
+const char * host = "192.168.1.200"; 
 
   // Variables for communication protocal regulation between server and client socket
 byte receivedArray[8];
@@ -162,7 +162,6 @@ void processSession(){
   } else {
     Serial.println("Don't receive enough bytes, try send again!");
     client.stop();
-    runWifi(); 
   }
 }
 void secondSession(){
@@ -185,7 +184,7 @@ void secondSession(){
         Serial.println("Success, using result to IO...");
         checkStatus();
     } else if (resultCode2 == FAILED_SESSION_FLAG){
-        Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Failed!! Trying again");
+        Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Session failed!");
     } else {
         Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Failed with unknow error");
     }
