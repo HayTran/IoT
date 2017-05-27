@@ -82,18 +82,18 @@ void setup() {
   lightMeter.begin();
 }
 void loop() {
-    // Block until receive request from ESP8266
+    // Block until receive request from ESP8266 and read value's sensors
   while(mySerial.available() <= 0){
+    readDHT();
+    readFlameSensor();
+    readBH1750();
+    readMQ();
+    delay(50);
   }
     // Read request from ESP8266
   enableWrite = mySerial.read();
     // Check whether or not enable Write is right
   if (enableWrite == 128){
-       // Read sensor value
-    readDHT();
-    readFlameSensor();
-    readBH1750();
-    readMQ();
     valueW ++;
       //  Start send to ESP8266
     mySerial.write(temperature);
@@ -115,7 +115,7 @@ void loop() {
     mySerial.write(valueW);
   }
   Serial.println("Sent data to ESP8266");
-   Serial.println("===========================");
+  Serial.println("===========================");
 }
 void readFlameSensor(){
   flameValue0 = analogRead(FLAME_0_PIN);

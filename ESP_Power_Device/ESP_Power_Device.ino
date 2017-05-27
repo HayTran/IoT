@@ -218,6 +218,9 @@ void checkStatus(){
           digitalWrite(D1,dev0);
           digitalWrite(D2,dev1);
           digitalWrite(D3,buzzer);
+          if (sim0 > 0 ) {
+            SIM();
+          }
       }
 }
 void SIM(){
@@ -232,7 +235,6 @@ void SIM(){
 //  Serial.println("Send SMS finished");
 // delay(1000);
   at("ATD"+SDT+";",10);
- 
 }
 void at(String _atcm,unsigned long _dl){
   sim808.print(_atcm+"\r\n");
