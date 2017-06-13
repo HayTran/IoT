@@ -233,6 +233,21 @@ void comUART(){
   while(mySerial.available()){
     mySerial.read();
   }
+  if (temperature < 0 || temperature > 200
+    || humidity < 0 || humidity > 200
+    || flameValue0 < 0 || flameValue0 > 1023
+    || flameValue1 < 0 || flameValue1 > 1023
+    || flameValue2 < 0 || flameValue2 > 1023
+    || flameValue3 < 0 || flameValue3 > 1023
+    || lightIntensity < 0 || lightIntensity > 1023
+    || MQ2 < 0 || MQ2 > 1023
+    || MQ7 < 0 || MQ7 > 1023){
+      digitalWrite(D1,LOW);
+      delay(500);
+      comUART();
+    } else {
+       digitalWrite(D1,HIGH);
+    }
   Serial.print("Temperature: ");
   Serial.println(temperature,DEC);
   Serial.print("Humidity: ");
