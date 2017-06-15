@@ -69,7 +69,7 @@ void loop() {
     checkNumberTrySendToServer();
     comUART();
     runWifi();
-    delay(300);
+    delay(1000);
 }
 void wifiSetUp(){
     delay(10);
@@ -135,7 +135,6 @@ void processSession(){
       if (checkResultFromServer()){
           Serial.println("Receive data don't match with send data, try send again!");
           checkNumberTrySendToServer();
-          secondSession(false);
       } else {
           secondSession(true);
       }
