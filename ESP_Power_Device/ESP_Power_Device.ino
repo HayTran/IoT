@@ -6,13 +6,13 @@
 SoftwareSerial mySerial(D6,D7); // RX, TX
 
   // Variable for connect to wifi
-const char *ssid = "Vinh Van";
-const char *password = "nhatro2008";
+const char *ssid = "Hay Tran";
+const char *password = "tranvanhay";
 int status = WL_IDLE_STATUS;     
 
   // Variable for connect to Socket Server
-const uint16_t port = 8080;         
-const char * host = "192.168.1.100"; 
+const uint16_t port = 4567;         
+const char * host = "192.168.0.100"; 
 
   // Variables for communication protocal regulation between server and client socket
 byte receivedArray[8];
