@@ -238,10 +238,10 @@ void comUART(){
     || flameValue1 < 0 || flameValue1 > 1023
     || flameValue2 < 0 || flameValue2 > 1023
     || flameValue3 < 0 || flameValue3 > 1023
-    || lightIntensity < 0 || lightIntensity > 1023
+    || lightIntensity < 0 || lightIntensity > 65535
     || MQ2 < 0 || MQ2 > 1023
     || MQ7 < 0 || MQ7 > 1023){
-      digitalWrite(D1,LOW);
+//      digitalWrite(D1,LOW);
       delay(500);
       comUART();
     } else {
