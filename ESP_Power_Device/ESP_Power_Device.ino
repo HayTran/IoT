@@ -28,19 +28,20 @@ const byte REQUEST_ALIVE_FLAG = 201;
  *  Corresponding with NODE_TYPE, it will send to server 18 bytes
  *  1 byte for flag, 1 byte for its capacity, 6 byte data
  */
-const byte BEGIN_SESSION_POWDEV_BYTE = 8;      
+const byte BEGIN_SESSION_POWDEV_BYTE = 9;      
 /**
  * 4 bytes for powdev data, 1 byte for first confirm session flags
  */
-const byte FIRST_CONFIRM_SESSION_POWDEV_BYTE = 6;
-const byte SECOND_CONFRIM_SESSION_POWDEV_BYTE = 7;
+const byte FIRST_CONFIRM_SESSION_POWDEV_BYTE = 7;
+const byte SECOND_CONFRIM_SESSION_POWDEV_BYTE = 8;
 const byte END_CONFRIM_SESSION_POWDEV_BYTE = 1;
 
 int ind = 0;
 byte numberTrySendToServer = 0;
 
   // Variable for strength of Wifi
-byte strengthWifi = 0;  
+byte strengthWifi = 0; 
+byte alarm = 0; 
   // Variable for communication with Module sim800L
 SoftwareSerial sim808(D6,D7);    // RX, TX
 String SDT="0973832930";
@@ -71,6 +72,7 @@ void setup() {
 void loop() {
     getWifiStatus();
     numberTrySendToServer = 0;
+    alarm = digitalRead(D5);
     runWifi();
     delay(500);
 }
@@ -143,6 +145,7 @@ void beginSession(){
     client.write(buzzer);
     client.write(sim0);
     client.write(sim1);
+    client.write(alarm);
 }
 void processSession(){
   if (client.available() == FIRST_CONFIRM_SESSION_POWDEV_BYTE) {
