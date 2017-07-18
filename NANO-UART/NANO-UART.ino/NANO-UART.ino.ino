@@ -11,7 +11,7 @@ byte enableWrite = 0; /* 0: disableWrite, 1:enableWrite */
 
 // Configure for DHT11
 const int DHTPIN = 4;       // Communicate by one-wire in pin 4 of Arduino
-const int DHTTYPE = DHT11;  // Declare type of sensor
+const int DHTTYPE = DHT22;  // Declare type of sensor
 DHT dht(DHTPIN, DHTTYPE);
 
 // Configure for Flame Sensor pin
