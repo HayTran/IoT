@@ -41,10 +41,10 @@ byte numberTrySendToServer = 0;
 
   // Variable for strength of Wifi
 byte strengthWifi = 0; 
-byte alarm = 0; 
+byte alarm = 0, alarm8 = 0; 
   // Variable for communication with Module sim800L
 SoftwareSerial sim808(D6,D7);    // RX, TX
-String SDT="0973832930";
+String SDT="01653754549";
   // Declare for controller
 byte dev0 = 1, dev1 = 1, buzzer = 1, sim0 = 1, sim1 = 1; 
 WiFiClient client;
@@ -73,6 +73,7 @@ void loop() {
     getWifiStatus();
     numberTrySendToServer = 0;
     alarm = digitalRead(D5);
+    alarm8 = digitalRead(D8);
     runWifi();
     delay(500);
 }
@@ -121,8 +122,8 @@ void runWifi(){
     digitalWrite(D4,LOW);
       //Increase counter variable 
     delay(20);
-    Serial.println("Connecting to server socket: ");
-    Serial.println(host);
+//    Serial.println("Connecting to server socket: ");
+//    Serial.println(host);
     while(!client.connect(host,port)){
        delay(300);
        Serial.println("======================================================= Connecting to server");
@@ -132,7 +133,7 @@ void runWifi(){
     delay(30);
     processSession();
     delay(5);
-    Serial.println("closing connection");
+//    Serial.println("closing connection");
     digitalWrite(D4,HIGH);
 }
 void beginSession(){
@@ -169,6 +170,7 @@ void processSession(){
 }
 void secondSession(){
     // begin a second confirm session
+  digitalWrite(D0,LOW);
   while(!client.connect(host,port)){
     delay(300);
     Serial.println("======================================================= Connecting to server");
@@ -198,6 +200,7 @@ void secondSession(){
       Serial.println(resultCode1,DEC);
       Serial.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
   }
+  digitalWrite(D0,HIGH);
 }
 void checkStatus(){
   if (receivedArray[0] != dev0 
@@ -221,23 +224,30 @@ void checkStatus(){
           digitalWrite(D1,dev0);
           digitalWrite(D2,dev1);
           digitalWrite(D3,buzzer);
-          if (sim0 > 0 ) {
-            SIM();
-          }
+         
+      } 
+  if (sim0 > 0 || alarm > 0 || alarm8 > 0) {
+        SIM();
       }
 }
 void SIM(){
-  Serial.println("Sending SMS");
-//  delay(500);
-//  at("AT",100);
-//  at("AT+CMGF=1",50);
-//  at("AT+CSCS=\"GSM\"",50);
-//  at("AT+CMGS=\"" + SDT+"\"",50);
-//  at("Dev1 and Dev2 is on: " + String(number),300);
-//  sim808.write(26);     // ctlr+Z
-//  Serial.println("Send SMS finished");
-// delay(1000);
-  at("ATD"+SDT+";",10);
+  if (sim0 > 0 || alarm > 0) {
+    Serial.println("Sending SMS");
+    delay(1000);
+    at("AT",200);
+    at("AT+CMGF=1",200);
+    at("AT+CSCS=\"GSM\"",200);
+    at("AT+CMGS=\"" + SDT+"\"",200);
+    at("He thong co canh bao, vui long ket noi internet de xem chi tiet",300);
+    sim808.write(26);     // ctlr+Z
+    Serial.println("Send SMS finished");
+    delay(2000);
+  }
+  if (alarm8 > 0) {
+    Serial.println("Call GSM");
+    at("ATD"+SDT+";",5000);
+  }
+ Serial.println("Already send SMS or Call");
 }
 void at(String _atcm,unsigned long _dl){
   sim808.print(_atcm+"\r\n");
