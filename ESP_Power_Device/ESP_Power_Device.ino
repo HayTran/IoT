@@ -73,6 +73,12 @@ void loop() {
     getWifiStatus();
     numberTrySendToServer = 0;
     alarm = digitalRead(D5);
+    if (alarm > 0) {
+      digitalWrite(D3,LOW);
+    }
+     else {
+      digitalWrite(D3,HIGH);
+     }
     alarm8 = digitalRead(D8);
     runWifi();
     delay(500);
